@@ -1,0 +1,27 @@
+<!--
+	JakeSiegers.com 2015
+	Feel free to use this code for anything you like.
+-->
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Jake's Web Audio Visualizer 2</title>
+		<link rel=stylesheet type="text/css" href="css/style.css">
+	</head>
+	<body>
+		<div class="infoBox">
+			<p class="title">
+				Jake's Audio Visualizer TWO! <span class="version"></span> - 2015 JakeSiegers.com<br />
+			</p>
+			<button class="play">Play</button>
+			<button class="stop">Stop</button>
+			<p class="debug"></p>
+		</div>
+		<canvas class="visualizer" width="1280" height="720" ></canvas>
+		<script type="text/javascript" src="js/buildInfo.js"></script>
+		<script type="text/javascript" src="js/vis.js"></script>
+		<script>window.onload = function(){new Vis();};</script>
+	</body>
+</html>
