@@ -19,9 +19,16 @@
 			<button class="stop">Stop</button>
 			<p class="debug"></p>
 		</div>
-		<canvas class="visualizer" width="1280" height="720" ></canvas>
+		<canvas class="visualizer"></canvas>
 		<script type="text/javascript" src="js/buildInfo.js"></script>
 		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r72/three.min.js"></script>
+		<script src="js/shaders/CopyShader.js"></script>
+		<script src="js/shaders/DotScreenShader.js"></script>
+		<script src="js/shaders/RGBShiftShader.js"></script>
+		<script src="js/postprocessing/EffectComposer.js"></script>
+		<script src="js/postprocessing/RenderPass.js"></script>
+		<script src="js/postprocessing/MaskPass.js"></script>
+		<script src="js/postprocessing/ShaderPass.js"></script>
 		<script type="text/javascript" src="js/vis.js"></script>
 		
 		<script>window.onload = function(){new Vis();};</script>

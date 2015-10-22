@@ -13,12 +13,6 @@ function Vis(){
 	this.debug = document.querySelector('.debug');
 
 	this.canvas = document.querySelector('.visualizer');
-	this.canvas.style.width=this.getScreenWidth()+"px";
-	this.canvas.style.height=this.getScreenHeight()+"px";
-
-	this.canvasContext = this.canvas.getContext("2d");
-	this.canvasContext.fillStyle = 'rgb(0, 0, 0)';
-	this.canvasContext.fillRect(0, 0, this.canvas.width,  this.canvas.height);
 
 	this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
 	this.analyser = this.audioContext.createAnalyser();
@@ -40,28 +34,10 @@ function Vis(){
 	this.dataTrail = [];
 
 	this.halfPi = Math.PI/2;
+	this.quarterPi = Math.PI/4;
 }
 
-Vis.prototype.getScreenWidth = function(){
-	var w = window,
-    d = document,
-    e = d.documentElement,
-    g = d.getElementsByTagName('body')[0],
-    x = w.innerWidth || e.clientWidth || g.clientWidth;
-	return x;
-};
-
-Vis.prototype.getScreenHeight = function(){
-	var w = window,
-    d = document,
-    e = d.documentElement,
-    g = d.getElementsByTagName('body')[0],
-    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
-	return y;
-};
-
 Vis.prototype.startBtnClicked = function(){
-	//varReset();
 	this.loadSong();
 	this.initVisualizer();
 	this.source.start(0);
@@ -112,22 +88,120 @@ Vis.prototype.initVisualizer = function(){
 
 	this.trigCount = 0;
 
+	this.initThreeJs();
+
 	if(this.drawInitalized === 0){
 		this.drawInitalized = 1;
+		window.addEventListener( 'resize', this.onWindowResize.bind(this), false );
 		this.draw();
 	}
 
+};
+
+Vis.prototype.initThreeJs = function(){
+	this.renderer = new THREE.WebGLRenderer({canvas: this.canvas});
+	this.renderer.setPixelRatio( window.devicePixelRatio );
+	this.renderer.setSize( window.innerWidth, window.innerHeight);
+	this.renderer.setClearColor( 0xffffff );
+
+	this.camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+	this.camera.position.z = 400;
+
+	this.scene = new THREE.Scene();
+	this.scene.fog = new THREE.Fog( 0x000000, 1, 1000 );
+
+	this.object = new THREE.Object3D();
+	this.scene.add( this.object );
+
+	var geometry = new THREE.SphereGeometry( 1, 10, 10 );
+	var material = new THREE.MeshPhongMaterial( { color: 0xffffff, shading: THREE.FlatShading } );
+
+	for ( var i = 0; i < this.bufferLength; i ++ ) {
+
+		var mesh = new THREE.Mesh( geometry, material );
+		mesh.position.set(0,0,0).normalize();
+		mesh.position.multiplyScalar(10);
+		mesh.rotation.set(0,0,0);
+		mesh.scale.x = mesh.scale.y = mesh.scale.z = 1;
+		this.object.add( mesh );
+
+	}
+
+	this.scene.add( new THREE.AmbientLight( 0x222222 ) );
+
+	this.light = new THREE.DirectionalLight( 0xffffff );
+	this.light.position.set( 1, 1, 1 );
+	this.scene.add( this.light );
+
+	// postprocessing
 	
+	this.composer = new THREE.EffectComposer( this.renderer );
+	this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
+
+	this.dotEffect = new THREE.ShaderPass( THREE.DotScreenShader );
+	this.dotEffect.uniforms.scale.value = 4;
+	this.composer.addPass( this.dotEffect );
+
+	this.rgbEffect = new THREE.ShaderPass( THREE.RGBShiftShader );
+	this.rgbEffect.uniforms.amount.value = 0.0015;
+	this.rgbEffect.renderToScreen = true;
+	this.composer.addPass( this.rgbEffect );
+	
+};
+
+Vis.prototype.onWindowResize = function(){
+	this.camera.aspect = window.innerWidth / window.innerHeight;
+	this.camera.updateProjectionMatrix();
+	this.renderer.setSize( window.innerWidth, window.innerHeight );
 };
 
 Vis.prototype.draw = function(){
 
 	this.trigCount += Math.PI /160;
-	if(this.trigCount>=Math.PI*2){
-		this.trigCount = 0;
-	}
+	this.trigCount = this.trigCount % (Math.PI*2);
+	
 
 	this.analyser.getByteTimeDomainData(this.dataArray);
+
+
+	var average = 0;
+	for(var a = 0,al = this.dataArray.length;a<al;a++){
+		average+=Math.abs(this.dataArray[0]-128);
+	}
+	average /= this.dataArray.length;
+
+	
+	this.dataTrail.unshift(average);
+	if(this.dataTrail.length>this.bufferLength){
+		this.dataTrail.pop();
+	}
+
+	this.rgbEffect.uniforms.amount.value = (average/128)*0.0080+0.0015;
+
+	for(var i = 0,il = this.dataArray.length;i < il ; i++) {
+		//console.log(this.dataTrail);
+
+		//this.debug.innerHTML = this.dataTrail[i];
+
+		this.dataArray[i] = Math.abs(this.dataArray[i]-128);
+
+		var x = Math.cos(this.halfPi+this.circleSlice*i)*(this.dataArray[i]+100+((average/128)*100));
+		var y = Math.sin(this.halfPi+this.circleSlice*i)*(this.dataArray[i]+100+((average/128)*100));
+
+		var child = this.object.children[i];
+
+		child.position.set(x,y,0);
+		child.scale.x = child.scale.y = child.scale.z = (this.dataTrail[i]/128)*10+((average/128)*3)+5;
+	}
+	
+	//this.object.rotation.x += 0.03;
+	//this.object.rotation.y += 0.05;
+
+	//this.renderer.render( this.scene, this.camera );
+	this.composer.render();
+
+
+	/*
 	//this.canvasContext.fillStyle = 'rgba(0,0,0,0.05)';
 	this.canvasContext.fillStyle = 'rgba(0,0,0,0.1)';
 	this.canvasContext.fillRect(0, 0, this.canvas.width,  this.canvas.height);
@@ -171,7 +245,7 @@ Vis.prototype.draw = function(){
 	}
 	//this.canvasContext.lineTo(this.canvas.width, this.canvas.height/2);
 	this.canvasContext.stroke();
-	
+	*/
 
 	/*
 	var binWidth = (this.canvas.width / this.bufferLength);
